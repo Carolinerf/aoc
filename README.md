@@ -7,8 +7,8 @@ rust 2024
 - [ ] day 03
 - [x] day 04
 - [x] day 05
-- [ ] day 06
-- [ ] day 07
+- [x] day 06
+- [x] day 07
 - [ ] day 08
 - [ ] day 09
 - [ ] day 10
