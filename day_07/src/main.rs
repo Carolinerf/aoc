@@ -1,4 +1,4 @@
-use std::{fs, io, vec};
+use std::{collections::HashSet, fs, io};
 
 fn main() {
     let filepath = "src/input.txt";
@@ -11,61 +11,53 @@ fn main() {
     println!("Part Two Answer: {}", answer);
 }
 
-fn left_equal_right(nums: &[usize], ops: &[&str]) -> usize {
-    let mut sum = nums[0];
-    for (i, op) in ops.iter().enumerate() {
-        sum = match *op {
-            "+" => sum + nums[i + 1],
-            "*" => sum * nums[i + 1],
-            "||" => {
-                let concat = format!("{}{}", sum, nums[i + 1]);
-                concat.parse::<usize>().unwrap()
-            }
-            _ => sum + 0,
-        }
-    }
-    sum
-}
+fn matches_target(nums: &[usize], target: usize, ops: &[&str]) -> bool {
+    let mut curr: HashSet<usize> = HashSet::new();
+    curr.insert(nums[0]);
 
-fn generate_op_combs(n: usize, ops: Vec<&str>) -> Vec<Vec<&str>> {
-    let mut result = Vec::new();
-    let b = ops.len();
-    for i in 0..(b.pow(n as u32) as usize) {
-        let mut comb = Vec::with_capacity(n);
-        let mut index = i;
-        for _ in 0..n {
-            comb.push(ops[index % b]);
-            index /= b;
+    for &num in &nums[1..] {
+        let mut next = HashSet::new();
+        for &val in &curr {
+            for &op in ops {
+                let new_val = match op {
+                    "+" => val + num,
+                    "*" => val * num,
+                    "||" => {
+                        let s = format!("{}{}", val, num);
+                        s.parse().unwrap()
+                    }
+                    _ => continue,
+                };
+                if new_val > target {
+                    continue;
+                }
+                if new_val == target && num == *nums.last().unwrap() {
+                    return true;
+                }
+                next.insert(new_val);
+            }
         }
-        result.push(comb);
+        curr = next;
+        if curr.is_empty() {
+            return false;
+        }
     }
-    result
+    curr.contains(&target)
 }
 
 fn solve(filepath: &str, ops: Vec<&str>) -> io::Result<usize> {
-    let mut total: usize = 0;
-    let content = fs::read_to_string(filepath).unwrap();
-    let mut op_combs_by_n = Vec::new();
-    for i in 1..12 {
-        op_combs_by_n.push(generate_op_combs(i, ops.clone()));
-    }
-
+    let mut total = 0;
+    let content = fs::read_to_string(filepath)?;
     for line in content.lines() {
-        let parts: Vec<&str> = line.split(':').collect();
-        let target: usize = parts[0].parse().unwrap();
-        let numbers: Vec<usize> = parts[1]
+        let mut parts = line.split(':');
+        let target: usize = parts.next().unwrap().parse().unwrap();
+        let nums: Vec<usize> = parts
+            .next()
+            .unwrap()
             .split_whitespace()
-            .map(|n| n.parse::<usize>().unwrap())
+            .map(|s| s.parse().unwrap())
             .collect();
-        let op_combs = op_combs_by_n[numbers.len() - 2].clone();
-        let mut matched = false;
-        for comb in op_combs {
-            if left_equal_right(&numbers, &comb) == target {
-                matched = true;
-                break;
-            }
-        }
-        if matched {
+        if matches_target(&nums, target, &ops) {
             total += target;
         }
     }
@@ -73,15 +65,15 @@ fn solve(filepath: &str, ops: Vec<&str>) -> io::Result<usize> {
 }
 
 fn d7p1(filepath: &str) -> io::Result<usize> {
-    Ok(solve(filepath, vec!["+", "*"]).unwrap())
+    solve(filepath, vec!["+", "*"])
 }
 
 fn d7p2(filepath: &str) -> io::Result<usize> {
-    Ok(solve(filepath, vec!["+", "*", "||"]).unwrap())
+    solve(filepath, vec!["+", "*", "||"])
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]
